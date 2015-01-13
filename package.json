@@ -1,0 +1,38 @@
+{
+  "name": "nodenv",
+  "version": "0.1.0",
+  "description": "Adds project level node_modules/.bin to your PATH",
+  "main": "index.js",
+  "contributors": [
+    {
+      "name": "David McKeown",
+      "url": "djm.io"
+    }
+  ],
+  "keywords": [
+    "environment",
+    "local",
+    "dependencies"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/ScottishDave/nodenv"
+  },
+  "bin": {
+    "nodenv": "./bin/nenv"
+  },
+  "author": "David McKeown",
+  "os": [
+    "!win32"
+  ],
+  "preferGlobal": true,
+  "engines": {
+    "node": "*"
+  },
+  "licenses": [
+    {
+      "type": "BSD",
+      "url": "http://github.com/ScottishDave/nodenv/raw/master/LICENSE"
+    }
+  ]
+}
