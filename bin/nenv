@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+
+NODENM_CACHE_FILE=~/.nodenm_cache
+MODULES_FOLDER='node_modules/.bin'
+
+if [[ -n "${ZSH_VERSION}" ]]
+then __array_offset=0
+else __array_offset=1
+fi
+
+
+nenv_init()
+{
+  nenv_home="$(dirname $HOME)"
+  typeset -a _folders
+
+  _folders=( $(
+    while [[ "$PWD" != "/" && "$PWD" != "$nenv_home" ]]
+    do
+      _folder="$PWD/$MODULES_FOLDER"
+      if [[ -e "${_folder}" ]]
+      then echo "${_folder}"
+      fi
+      builtin cd .. &>/dev/null
+    done
+  ) )
+
+  _folder=${#_folders[@]}
+  while (( _folder > 0 ))
+  do
+    folder=${_folders[_folder-__array_offset]}
+    nenv_check_modules "$folder"
+    : $(( _folder -= 1 ))
+  done
+}
+
+
+nenv_check_modules()
+{
+  typeset nenv_bin
+  nenv_bin=$1
+
+  if nenv_check_auth "$nenv_bin"; then
+    nenv_activate "$nenv_bin"
+    return 0
+  else
+    echo
+    echo "node-nm is about to add the following to your PATH:"
+    echo
+    echo "    $nenv_bin"
+    echo
+    read -p "Are you cool with this? (Y/n) " -n 1 -r
+    echo
+    if [[ "$REPLY" =~ ^("y"|"Y"|" ") ]]; then
+      nenv_addifnot_cache "$nenv_bin"
+      nenv_activate "$nenv_bin"
+    else
+      echo "Not added"
+    fi
+  fi
+}
+
+
+nenv_activate()
+{
+  typeset nenv_bin
+  nenv_bin=$1
+
+  if [ "$nenv_bin" != "$NODENM_ACTIVE_BIN" ] && [ "$NODENM_ACTIVE" ]; then
+    echo 'Identified non-matching min'
+    nenv_deactivate
+  elif [ "$nenv_bin" == "$NODENM_ACTIVE_BIN" ]; then
+    echo "Already active: $nenv_bin"
+    return 0
+  fi
+
+  export NODENM_ACTIVE=true
+  export NODENM_ACTIVE_BIN=$nenv_bin
+
+  if [[ -z $(echo ${PATH} | grep $nenv_bin) ]]; then
+    echo "Activated: $nenv_bin"
+    PATH="$nenv_bin:$PATH"; export PATH
+  fi
+}
+
+
+nenv_addifnot_cache()
+{
+  typeset nenv_bin
+  nenv_bin=$1
+
+  echo "$nenv_bin" >> $NODENM_CACHE_FILE
+}
+
+
+nenv_check_auth()
+{
+  typeset nenv_bin 
+  nenv_bin=$1
+  touch $NODENM_CACHE_FILE
+  \grep -Gq "$nenv_bin" $NODENM_CACHE_FILE
+}
+
+
+nenv_deactivate()
+{
+  if [ "$NODENM_ACTIVE" ]; then
+    echo "Deactivating: $NODENM_ACTIVE_BIN"
+    PATH=${PATH#${NODENM_ACTIVE_BIN}:}
+    unset NODENM_ACTIVE
+    unset NODENM_ACTIVE_BIN
+  else
+    echo "No active environment found"
+  fi
+}
+
+nenv_reset()
+{
+  rm "$NODENM_CACHE_FILE"
+  echo "Removed cache file: $NODENM_CACHE_FILE"
+}
+
+nenv_help() 
+{
+  cat <<-EOF
+  Usage: source nenv [COMMAND] 
+  Commands:
+    nenv                        Outputs help
+    nenv -a|--activate          Activates current node_modules/.bin folder to PATH variable
+    nenv -d|--deactivate        Deactivate current running environment
+    nenv -r|--reset             Will reset the cache where authorized projects are stored
+EOF
+}
+
+nenv ()
+{
+  while test $# -ne 0; do
+    case $1 in
+      -a|--activate) nenv_init ;;
+      -d|--deactivate) nenv_deactivate ;;
+      -h|--help|help) nenv_help ;;
+    esac
+    shift
+  done
+}
+
+nenv "$@"
